@@ -1,0 +1,57 @@
+version: "3"
+
+services:
+  db:
+    hostname: postgres
+    container_name: postgres
+    image: postgres:13.13-alpine3.17
+    environment:
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mydatabase
+    volumes:
+      - ./database/persistent_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U username -d mydatabase"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # For connecting outside Docker network
+    ports:
+      - "5432:5432"
+
+  # web:
+  #   hostname: flask-app
+  #   container_name: flask-app
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.flask
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   environment:
+  #     - DATABASE_URI=postgresql://username:password@db:5432/mydatabase
+  #   networks:
+  #     - backend
+
+  # nginx:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.nginx
+  #   ports:
+  #     - "80:80"
+  #   depends_on:
+  #     - web
+  #   networks:
+  #     - backend
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  persistent_data:

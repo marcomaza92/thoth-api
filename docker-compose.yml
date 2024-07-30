@@ -16,42 +16,52 @@ services:
       - backend
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U username -d mydatabase"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 60s
     # For connecting outside Docker network
+    # ports:
+    #   - "5432:5432"
+
+  web:
+    hostname: flask-app
+    container_name: flask-app
+    image: web-service-flask:1.0.0
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URI=postgresql://username:password@postgres:5432/mydatabase
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:5000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # ports:
+    #   - "5000:5000"
+
+  nginx:
+    hostname: nginx
+    container_name: nginx
+    image: nginx:stable-alpine-perl
+    depends_on:
+      web:
+        condition: service_healthy
     ports:
-      - "5432:5432"
-
-  # web:
-  #   hostname: flask-app
-  #   container_name: flask-app
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.flask
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-  #   environment:
-  #     - DATABASE_URI=postgresql://username:password@db:5432/mydatabase
-  #   networks:
-  #     - backend
-
-  # nginx:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.nginx
-  #   ports:
-  #     - "80:80"
-  #   depends_on:
-  #     - web
-  #   networks:
-  #     - backend
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      - backend
 
 networks:
   backend:
     driver: bridge
+    name: backend
 
 volumes:
   persistent_data:
